@@ -8,7 +8,7 @@
 	<style>
 		#graph
 			{
-
+			float: left;
 			background-color:#b0e0e6;
 			}
 		div.button
@@ -19,6 +19,7 @@
 			}	
 		#barchart
 			{
+			
 			background-color:#ff1234;
 			margin: 2px;
 			}
@@ -38,8 +39,8 @@
 
   
 		<script type="text/javascript">
-			var w = 2000;
-			var h = 2000;
+			var w = 800;
+			var h = 600;
 			//Create SVG element
 			
 			var rightMenu = d3.select("body")
@@ -55,8 +56,8 @@
 			var barchart = d3.select("body")
 					.select("#barchart")
 					.append("svg")
-					.attr("width", 960)
-					.attr("height",200);
+					.attr("width",300)
+					.attr("height",600);
 			
 			
 			//var dataset;
@@ -99,26 +100,24 @@
 						.append("div")
 						.attr("class", "button")
 						.on("click", function(d,buttonNr) { 
-							if (d.selected == 0) {
+							if (d.selected != 1) {
 								dataset.nodes[d.original_index].selected = 1;
-								console.log(d);
-								console.log(dataset.nodes[d.original_index]);
 								//mix_it();
-								//SelectAllConnected(d.index,2);
+								SelectAllConnected();
 								//nodeHighlight(d.index,1);
 								//edgeHighlight(d.index,1);
 								d3.select(this).style('background-color','red');
 							}
 							else {
 								dataset.nodes[d.original_index].selected = 0;
-								
+								SelectAllConnected();
 								//SelectAllConnected(d.index,0);
 								//nodeHighlight(d.index,0);
 								//edgeHighlight(d.index,0);
 								d3.select(this).style('background-color','#40e6e6');
 							}
 							draw_graph();
-							//secondaryConnectedHighlight();
+							draw_barchart();
 						})
 						.text(function (d,i) { return d.name + "(" + d.count + ")";})
 			}
@@ -160,7 +159,7 @@
 						.links(my_edges)
 						.size([w, h])
 						.linkDistance(function(d,i) { return  maxDistance( d.count)   })
-						.charge(function(d,i) { return  charge (d.count)   }) // <-- New!
+						.charge(function(d,i) { return  charge (d.count)   }) 
 						.start();
 					var edges = svg.selectAll("line")
 						.data(my_edges)
@@ -172,9 +171,10 @@
 						.data(my_nodes)
 						.enter()
 						.append("circle")
-						.attr("r", function (d,i) {  return ballSize( d.count ); })
+						.attr("r", function (d,i) {  return (d.selected == 1) ? ballSize( d.count ) : ballSize( d.count / 3 ); })
 						.style("fill", function(d, i) {
-							return "pink";
+							if (d.selected == 1) { return "green"; }
+							else { return "grey"; }
 						});
 					var text = svg.selectAll("text")
 						.data(my_nodes)
@@ -197,40 +197,77 @@
 			}
 			
 			function draw_barchart() {
-				my_nodes = dataset.nodes.slice(0);
+				/*my_nodes = dataset.nodes.slice(0);
 				for (i in my_nodes) {
 					my_nodes[i].original_index = i;
-				}
-				my_nodes = my_nodes.sort(function (a,b) {return b.count - a.count;});
-				var bar_height = 200;
-				var bar_width = 40;
-				var labelX = function(x) {  return x * bar_width + 5; };
-				var labelY = function(y) { return  bar_height- y + 5 };
+				}*/
+				barchart.selectAll("rect").remove();
+				barchart.selectAll("text").remove();
+				my_nodes = []
+				for (c in dataset.nodes) { if (dataset.nodes[c].selected != 0) { my_nodes.push(dataset.nodes[c]); }}
+				//my_nodes = my_nodes.sort(function (a,b) {return b.count - a.count;});
+				var w = 200;
+				var h = 30;
+				var scale = d3.scale.linear();
+				scale.domain([10,400]);
+				scale.range([w/10, 300]);
+				
+
 				
 				var bars = barchart.selectAll('rect')
-							.data(my_nodes.slice(0,20))
+							.data(my_nodes)
 							.enter()
 							.append("rect")
-							.attr("x", function(d,i) {  return i * bar_width; })
-							.attr("y", function (d,i) { return  bar_height- d.count  })
-							.attr("width", bar_width - 10)	
-							.attr("height", function(d,i) { return d.count; })
-							.attr("fill", function(d) { return "rgb(0, 0, " + (d.count) + ")";})
+							.attr("y", function(d,i) {  return i * (h + 2); })
+							.attr("x", function (d,i) {  return 0;  })
+							.attr("width", function(d) {  console.log(scale(d.count)); return scale(d.count); })	
+							.attr("height", function(d,i) { return h; })
+							.attr("fill", function(d) { return (d.selected == 1) ? "pink" : "grey";})
 							;
 				var labels = barchart.selectAll('text')
 							.data(my_nodes.slice(0,20))
 							.enter()
 							.append("text")
-							.attr("x", function(d,i) { return labelX(i); })
-							.attr("y", function (d,i) { return labelY(d.count); })
-							.attr("transform", function (d,i) { return "rotate(90," + labelX(i)  + "," + labelY(d.count) + " )"; })
-							.text(function (d) { return d.name })
+							.attr("y", function(d,i) { return i * (h + 2) + h/2; })
+							.attr("x", function (d,i) { return 0; })
+							//.attr("transform", function (d,i) { return "rotate(90," + labelX(i)  + "," + labelY(d.count) + " )"; })
+							.text(function (d) { return d.name + d.count })
 							.attr("fill","white")
 							;
 				
 			}
 			
-			select_all();
+			function SelectAllConnected() {
+				//clean all the #2 nodes
+				for  (c in dataset.nodes) {
+					if (dataset.nodes[c].selected == 2) { dataset.nodes[c].selected = 0;} 
+				}
+				// select for #2 the connected nodes
+				for  (c in dataset.edges) {
+					if (dataset.nodes[dataset.edges[c].target].selected == 1 && dataset.nodes[dataset.edges[c].source].selected == 0) {
+						dataset.nodes[dataset.edges[c].source].selected = 2;
+					}
+					if (dataset.nodes[dataset.edges[c].source].selected == 1 && dataset.nodes[dataset.edges[c].target].selected == 0) {
+						dataset.nodes[dataset.edges[c].target].selected = 2;
+					}
+				
+				}
+						/*for (c in dataset.edges) {
+							//console.log(dataset.edges[c]);
+							if (select == 2) {
+								if (dataset.edges[c].source == nr) {
+									if (dataset.nodes[dataset.edges[c].target].selected != 1) {  dataset.nodes[dataset.edges[c].target].selected = 2; }	
+
+								}
+								if (dataset.edges[c].target == nr) { 	
+									if (dataset.nodes[dataset.edges[c].target].selected != 1) { dataset.nodes[dataset.edges[c].source].selected = 2; }
+
+								}
+							}
+						}*/
+			};
+			
+			//select_all();
 			draw_skill_menu();
 			draw_barchart();
 			draw_graph();
