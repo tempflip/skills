@@ -8,28 +8,38 @@
 	<style>
 		#graph
 			{
-			float: left;
+
 			background-color:#b0e0e6;
 			}
 		div.button
 			{
 			background-color:#40e6e6;
 			margin: 2px;
-			float: left;
+			float: left
+			}	
+		#barchart
+			{
+			background-color:#ff1234;
+			margin: 2px;
 			}
+			
+			
 	</style>
     </head>
    
     <body>
 		<div id = "graph">
 		</div>
+		<div id = "barchart">
+		</div>
 		<div id = "menu">
 		</div>
 
+
   
 		<script type="text/javascript">
-			var w = 800;
-			var h = 600;
+			var w = 2000;
+			var h = 2000;
 			//Create SVG element
 			
 			var rightMenu = d3.select("body")
@@ -42,9 +52,16 @@
 						.attr("height", h);
 			var color = d3.scale.category10();
 			
+			var barchart = d3.select("body")
+					.select("#barchart")
+					.append("svg")
+					.attr("width", 960)
+					.attr("height",200);
+			
+			
 			//var dataset;
 			//d3.json("myGraph_2.json", function(json) {     raw_json = json; draw()});
-			d3.json("myGraph_831.json", function(json) { 
+			d3.json("myGraph_2200.json", function(json) { 
 				 /*draw()*/
 				dataset = json;
 				for (i in dataset.nodes) {
@@ -61,6 +78,11 @@
 			function mix_it () {
 				for (i in dataset.nodes) {
 					if (Math.random() * 4 < 1) { dataset.nodes[i].selected = 1; }
+				}
+			}
+			function select_all () {
+				for (i in dataset.nodes) {
+					  dataset.nodes[i].selected = 1; 
 				}
 			}
 			
@@ -122,9 +144,8 @@
 						}
 					}
 					
-
-					ballSize = function(x) {return 10 + Math.log(x/15) * 15; }
-					edgeSize = function(x) {return Math.log(x/40)*3;}
+					ballSize = function(x) {return 10 + Math.log(x/15) * 7; }
+					edgeSize = function(x) {return Math.log(x/40)*2;} 
 					textSize = function(x) {return 14;}
 					maxDistance = function(x) {return 300 - x/3;   }
 					charge = function(x) {return -1 * (200 + x);   }
@@ -175,237 +196,47 @@
 						text.attr("transform", function(d) {return "translate(" + d.x + "," + d.y + ")";});
 			}
 			
-			//mix_it();
+			function draw_barchart() {
+				my_nodes = dataset.nodes.slice(0);
+				for (i in my_nodes) {
+					my_nodes[i].original_index = i;
+				}
+				my_nodes = my_nodes.sort(function (a,b) {return b.count - a.count;});
+				var bar_height = 200;
+				var bar_width = 40;
+				var labelX = function(x) {  return x * bar_width + 5; };
+				var labelY = function(y) { return  bar_height- y + 5 };
+				
+				var bars = barchart.selectAll('rect')
+							.data(my_nodes.slice(0,20))
+							.enter()
+							.append("rect")
+							.attr("x", function(d,i) {  return i * bar_width; })
+							.attr("y", function (d,i) { return  bar_height- d.count  })
+							.attr("width", bar_width - 10)	
+							.attr("height", function(d,i) { return d.count; })
+							.attr("fill", function(d) { return "rgb(0, 0, " + (d.count) + ")";})
+							;
+				var labels = barchart.selectAll('text')
+							.data(my_nodes.slice(0,20))
+							.enter()
+							.append("text")
+							.attr("x", function(d,i) { return labelX(i); })
+							.attr("y", function (d,i) { return labelY(d.count); })
+							.attr("transform", function (d,i) { return "rotate(90," + labelX(i)  + "," + labelY(d.count) + " )"; })
+							.text(function (d) { return d.name })
+							.attr("fill","white")
+							;
+				
+			}
+			
+			select_all();
 			draw_skill_menu();
+			draw_barchart();
 			draw_graph();
 
 			} // end start vis
 			
-			
-			
-			
-			
-			
-			function draw() {
-					var dataset = raw_json;
-					for (i in dataset.nodes) {
-						dataset.nodes[i].selected = 0;
-						//console.log(dataset.nodes[i]);
-					}
-					
-					ballSize = function(x) {return 10; }
-					edgeSize = function(x) {return 1;}
-					textSize = function(x) {return 14;}
-					maxDistance = function(x) {return 200 - x;   }
-					charge = function(x) {return x * -3   }
-					var force = d3.layout.force()
-						.nodes(dataset.nodes)
-						.links(dataset.edges)
-						.size([w, h])
-						.linkDistance(function(d,i) { return  maxDistance( dataset.edges[i].count)   })
-						.charge(function(d,i) { return  charge (dataset.edges[i].count)   }) // <-- New!
-						.start();
-					var edges = svg.selectAll("line")
-						.data(dataset.edges)
-						.enter()
-						.append("line")
-						.style("stroke", function(d,i) { return 'grey';   })
-						.style("stroke-width", function (d,i) { return edgeSize (dataset.edges[i].count) ; });
-					var nodes = svg.selectAll("circle")
-						.data(dataset.nodes)
-						.enter()
-						.append("circle")
-						.filter( function(d,i) { return d.selected;})
-						.attr("r", function (d,i) {  return ballSize( dataset.nodes[i].count ); })
-						.style("fill", function(d, i) {
-							return "pink";
-						})
-						.on("click",function(d,i) {
-							if (d.selected == 0) {
-								d.selected = 1;
-								//SelectAllConnected(d.index,2);
-								nodeHighlight(d.index,1);
-								edgeHighlight(d.index,1);
-								menuHighlight(d.index,1);
-								
-							}
-							else {
-								d.selected = 0;
-								//SelectAllConnected(d.index,0);
-								nodeHighlight(d.index,0);
-								edgeHighlight(d.index,0);
-								menuHighlight(d.index,0);
-							}
-							secondaryConnectedHighlight();
-						});
-						
-						
-					var text = svg.selectAll("text")
-						.data(dataset.nodes)
-						.enter()
-						.append("text")
-						.attr("x", 8)
-						.attr("y", ".31em")
-						.attr("font-size", function (d,i) {  return textSize(dataset.nodes[i].count) + "px";})
-						.text(function(d,i) { return dataset.nodes[i].name;});
-					
-					
-					var menu = rightMenu.selectAll('div')
-						.data(dataset.nodes)
-						.enter()
-						.append("div")
-						.attr("class", "button")
-						.on("click", function(d,buttonNr) { 
-							if (d.selected == 0) {
-								d.selected = 1;
-								draw();
-								//SelectAllConnected(d.index,2);
-								nodeHighlight(d.index,1);
-								edgeHighlight(d.index,1);
-								d3.select(this).style('background-color','red');
-							}
-							else {
-								d.selected = 0;
-								
-								//SelectAllConnected(d.index,0);
-								nodeHighlight(d.index,0);
-								edgeHighlight(d.index,0);
-								d3.select(this).style('background-color','#40e6e6');
-							}
-							secondaryConnectedHighlight();
-						})
-						.text(function (d,i) { return d.name;})
-						
-						function nodeHighlight(nr,select) {
-							nodes.filter(function(d,i) {
-								
-								if (nr == d.index) {
-									if (select == 1) {
-										d3.select(this).style("stroke-width",3);
-										d3.select(this).style("stroke",'red');
-									 }
-									 else if (select == 2) {
-										d3.select(this).style("stroke-width",2);
-										d3.select(this).style("stroke",'black');
-									 }
-									 else {
-										d3.select(this).style("stroke-width",0);
-									 }
-								}
-							});
-						};
-
-						function edgeHighlight(nr,select)  {
-							edges.filter(function(d,i) { 
-								if (nr == d.source.index || nr == d.target.index) {
-									if (select == 1) {
-										d3.select(this).style("stroke",'blue');
-									}
-									else {
-										d3.select(this).style("stroke",'grey');
-									}
-								}
-							} );
-						}
-						function menuHighlight(nr, select) {
-							menu.filter(function(d,i) {
-								if (d.index == nr) {
-									if (select == 1) {
-										d3.select(this).style('background-color','red');
-									}
-									else {
-										d3.select(this).style('background-color','#40e6e6');
-									}
-								}
-							});
-						}
-		
-					function secondaryConnectedHighlight() {
-						selectedNodes = [];
-						for (c in dataset.nodes) {
-							if (dataset.nodes[c].selected == 1) { selectedNodes.push(c);}
-						}
-						secondaryNodes = []
-						for (c in selectedNodes) {
-							for (j in dataset.edges) {
-								if (dataset.edges[j].source.index == selectedNodes[c]) {
-									secondaryNodes.push(dataset.edges[j].target.index)
-								}
-								if (dataset.edges[j].target.index == selectedNodes[c]) {
-									secondaryNodes.push(dataset.edges[j].source.index)
-								}
-							}
-						}
-						
-						for (c in dataset.nodes) {
-							var index = secondaryNodes.indexOf(parseInt(c)); 
-							if (index != -1) {
-								if (dataset.nodes[c].selected == 0) { nodeHighlight(c,2); }
-							}
-							else {
-								if (dataset.nodes[c].selected == 0) { nodeHighlight(c,0); }
-							}
-						}
-					};
-					
-					
-					/*function SelectAllConnected(nr,select) {
-						for (c in dataset.edges) {
-							if (select == 2) {
-								if (dataset.edges[c].source.index == nr) { 	
-									nodeHighlight(dataset.edges[c].target.index,2);
-								}
-								if (dataset.edges[c].target.index == nr) { 	
-									nodeHighlight(dataset.edges[c].source.index,2);
-								}
-							}
-							else {
-								if (dataset.edges[c].source.index == nr) { 	
-									nodeHighlight(dataset.edges[c].target.index,0);
-								}
-								if (dataset.edges[c].target.index == nr) { 	
-									nodeHighlight(dataset.edges[c].source.index,0);
-								}							
-							}
-						}
-					};*/
-					
-					
-
-						;
-					/* PELDA A SUBSELECT-RE ////////////////////
-					x = menu
-						.selectAll("text");
-					//console.log(x[0][0]);
-					x.filter(function(d,i) { 
-						if (i == 1) { 
-							return d3.select(this).text('iuyiyu');
-						}
-						} );
-					*/
-						
-
-					// kiszamoljuk az abrat
-					for (var i = 0; i < 500; ++i) force.tick();
-						edges.attr("x1", function(d) { return d.source.x; })
-								.attr("y1", function(d) { return d.source.y; })
-								.attr("x2", function(d) { return d.target.x; })
-								.attr("y2", function(d) { return d.target.y; });
-						nodes.attr("cx", function(d) { return d.x; })
-								.attr("cy", function(d) { return d.y; });
-						text.attr("transform", function(d) {
-								return "translate(" + d.x + "," + d.y + ")";});
-					
-					
-					
-					
-					
-					
-					
-					
-					
-			}
-				
 			
 
 						 
